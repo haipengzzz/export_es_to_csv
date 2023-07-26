@@ -23,31 +23,34 @@ def export_index_to_csv(es_host, es_port, es_username, es_password, index_name, 
     with open(output_file, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         # 写入CSV文件的表头
-        writer.writerow(["timestamp", "host","os"])
+        writer.writerow(["timestamp", "host","os","message"])
         sid = result['_scroll_id']
         total_hits = result['hits']['total']['value']
 
         while total_hits > 0:
             hits = result["hits"]["hits"]
             for hit in hits:
-                # 这里需要根据你的索引结构来获取相应的字段值，例如hit["_source"]["timestamp"]
-                #需要和上面的字段对应
-                row = [
-                    hit["_source"]["@timestamp"],
-                    hit['_source']['host']['hostname'],
-                    hit['_source']['host']['os'],
-                ]                
-                writer.writerow(row)
-            result = es.scroll(scroll_id=sid, scroll=scroll)
-            sid = result['_scroll_id']
-            total_hits -= len(hits)
+                try:
+                    # 这里需要根据你的索引结构来获取相应的字段值，例如hit["_source"]["timestamp"]
+                    row = [
+                        hit["_source"]["@timestamp"],
+                        hit['_source']['host']['hostname'],
+                        hit['_source']['host']['os'],
+                    ]
+                    writer.writerow(row)
+                except KeyError as e:
+                    # 如果出现KeyError异常，执行这里的代码块
+                    print(f"Encountered KeyError: {e}. Skipping this entry.")
+                    result = es.scroll(scroll_id=sid, scroll=scroll)
+                    sid = result['_scroll_id']
+                    total_hits -= len(hits)
 
     print(f"导出完成，结果保存在 {output_file}")
 if __name__ == "__main__":
     host = "" 
     port = 9200 
     username = "" 
-    password = ""
+    password = ""  
     index_name = ""  # 替换为你要查询的索引名称
-    keyword = ""  # 替换为你要查询的关键字
+    keyword = "1.9.0"  # 替换为你要查询的关键字
     export_index_to_csv(host, port, username, password, index_name, keyword)
